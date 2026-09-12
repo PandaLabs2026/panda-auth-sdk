@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PandaAuth.Sdk</RootNamespace>
+    <AssemblyName>PandaAuth.Sdk</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <!-- Phase 1 作为内部 NuGet 包发布时启用 -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 跨仓共享契约；要求 panda-auth-share 与本仓同级克隆（工作区布局见元仓 WORKSPACE.md） -->
+    <ProjectReference Include="..\..\..\panda-auth-share\src\PandaAuth.Shared\PandaAuth.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
