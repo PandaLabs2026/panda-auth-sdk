@@ -16,5 +16,10 @@ public sealed class PandaAuthClientOptions
     /// <summary>严格白名单回调地址，禁止通配符。</summary>
     public string RedirectUri { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 申请的 scope。**默认已含 <c>roles</c>**：服务端按最小披露原则**只在客户端申请了
+    /// <c>roles</c> 时才把用户角色写入 Access Token**，并只在此时于 userinfo 返回角色。
+    /// 若资源服务器需要从 AT（或其内省结果）读取角色，请勿从本数组移除 <c>roles</c>。
+    /// </summary>
     public string[] Scopes { get; set; } = ["openid", "profile", "email", "roles", "offline_access"];
 }
