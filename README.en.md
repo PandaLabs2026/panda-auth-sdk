@@ -10,25 +10,31 @@ The .NET integration SDK repository for PandaAuth, depending on sibling [panda-a
 
 ## Current implementation and limitations
 
-Only [PandaAuthClientOptions](src/PandaAuth.Sdk/PandaAuthClientOptions.cs) and the shared-contract reference exist. The [project](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj) has `IsPackable=false`. Complete login, token management, userinfo and role-reading wrappers are not implemented; no released NuGet package or installation command is claimed.
+The stateless [PandaAuthClient](src/PandaAuth.Sdk/PandaAuthClient.cs) provides the minimum OIDC capabilities: discovery, authorization code + PKCE, client credentials, refresh token, userinfo and revoke. It does not persist state, PKCE verifiers, access tokens or refresh tokens. The [project](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj) remains `IsPackable=false`; no released NuGet package is claimed.
 
 Web, MAUI, desktop and Blazor wrappers/samples will follow actual needs. Protocol support does not imply a complete cross-platform SDK. The existing [Server DemoClient](https://github.com/PandaLabs2026/panda-auth-server/tree/main/samples/PandaAuth.DemoClient) is not evidence that this SDK has passed acceptance testing.
 
 ## Build
 
-Use the .NET SDK selected by [global.json](global.json) (currently 10.0.112 with latestFeature roll-forward). Clone repositories as siblings using the [workspace layout](https://github.com/PandaLabs2026/panda-auth/blob/main/WORKSPACE.md); cross-repository links require access. Commands below run from this repository root. They were statically checked, not executed, in this documentation change.
+Use the .NET SDK selected by [global.json](global.json) (currently 10.0.112 with latestFeature roll-forward). This repository can be built without the private PandaAuth coordination repository; clone the public Share repository beside it:
 
-Clone Share beside this repository first.
+```bash
+git clone https://github.com/PandaLabs2026/panda-auth-sdk.git
+git clone https://github.com/PandaLabs2026/panda-auth-share.git
+cd panda-auth-sdk
+```
+
+Run the commands below from the SDK repository root:
 
 ```bash
 dotnet build PandaAuth.Sdk.slnx
 ```
 
-This is a library scaffold with no standalone application entry point. Phase 1 targets minimal integration and consumer validation; public packaging requires separate release acceptance.
+This repository has no standalone application entry point. The current phase targets minimal integration and consumer validation; public packaging requires separate release acceptance.
 
 ## Roadmap and governance
 
-Implementation targets are tracked in the [capability matrix](https://github.com/PandaLabs2026/panda-auth/blob/main/docs/open-source/capabilities.md) and [release gates](https://github.com/PandaLabs2026/panda-auth/blob/main/docs/open-source/release-readiness.md). Real product needs drive the roadmap; community requests are evaluated without delivery commitments. [Community/commercial boundaries](https://github.com/PandaLabs2026/panda-auth/blob/main/docs/open-source/strategy.md) describe scope, not delivered commercial products.
+Product roadmap, release gates and community/commercial boundaries remain maintainer-governed until a formal public release. This README documents only the independently reproducible SDK build and integration boundary; it does not make private coordination documents a build dependency.
 
 - [Security](SECURITY.md): selected private reporting channel, enablement unverified; no public vulnerability details.
 - [Contributing](CONTRIBUTING.md): repository-specific checks and the shared contribution policy.
