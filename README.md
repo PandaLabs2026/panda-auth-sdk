@@ -10,7 +10,11 @@ PandaAuth 的 .NET 接入 SDK 仓，依赖同级 [panda-auth-share](https://gith
 
 ## 当前实现与限制
 
-目前仅有 [PandaAuthClientOptions](src/PandaAuth.Sdk/PandaAuthClientOptions.cs) 与共享契约引用；[项目配置](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj)为 `IsPackable=false`。尚无完整登录、令牌管理、userinfo 或角色读取封装，不提供已发布 NuGet 包或包安装命令。
+当前已提供无状态的 [PandaAuthClient](src/PandaAuth.Sdk/PandaAuthClient.cs) 最小 OIDC 能力：discovery、授权码 + PKCE、client credentials、refresh token、userinfo 和 revoke；userinfo 同时暴露原始 claims 与常用角色数组。SDK 不持久化 state、PKCE verifier、access token 或 refresh token，调用方负责保存、过期处理和安全清理。协议错误通过 [PandaAuthProtocolException](src/PandaAuth.Sdk/PandaAuthProtocolException.cs) 暴露有限错误字段，不回显 client secret。
+
+授权码流程由 `CreateAuthorizationRequestAsync` 生成授权 URL、state 和 PKCE verifier；调用方必须校验回调 state，并把 verifier 传入 `ExchangeCodeAsync`。本阶段不包含 provider adapter、本地 JWT/JWKS 校验、introspection、Web/Maui/桌面封装，也不承诺具体外部 provider。
+
+[项目配置](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj)仍为 `IsPackable=false`。测试位于 [PandaAuth.Sdk.Tests](tests/PandaAuth.Sdk.Tests)，不提供已发布 NuGet 包或包安装命令。
 
 Web、MAUI、桌面、Blazor 等客户端封装与示例按需求推进；不能由协议支持推断全平台 SDK 已交付。现有 Web 示例在 [Server DemoClient](https://github.com/PandaLabs2026/panda-auth-server/tree/main/samples/PandaAuth.DemoClient)，不属于本仓 SDK 验收证据。
 
@@ -24,7 +28,7 @@ Web、MAUI、桌面、Blazor 等客户端封装与示例按需求推进；不能
 dotnet build PandaAuth.Sdk.slnx
 ```
 
-本仓是库骨架，没有独立应用启动入口。Phase 1 目标为最小接入能力及消费方验证，公开包需另行通过发行门禁。
+本仓没有独立应用启动入口。本阶段目标为最小接入能力及消费方验证，公开包需另行通过发行门禁。
 
 ## Roadmap 与治理
 
