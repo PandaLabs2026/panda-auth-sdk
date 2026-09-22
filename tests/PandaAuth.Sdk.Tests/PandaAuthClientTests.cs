@@ -133,6 +133,29 @@ public sealed class PandaAuthClientTests
         Assert.Equal(["/.well-known/openid-configuration", "/connect/token", "/.well-known/openid-configuration", "/connect/revoke"], calls);
     }
 
+    [Fact]
+    public async Task ClientCredentialsDoesNotRequireRedirectUri()
+    {
+        using var handler = new FakeHttpMessageHandler((request, _) =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
+                return Json("""{"token_endpoint":"https://issuer.example/connect/token"}""");
+
+            return Json("""{"access_token":"service-access","token_type":"Bearer","expires_in":600}""");
+        });
+        var client = new PandaAuthClient(new HttpClient(handler), new PandaAuthClientOptions
+        {
+            Issuer = "https://issuer.example",
+            ClientId = "service-client",
+            ClientSecret = "secret",
+            Scopes = ["api"]
+        });
+
+        var token = await client.GetClientCredentialsTokenAsync();
+
+        Assert.Equal("service-access", token.AccessToken);
+    }
+
     private static HttpResponseMessage Json(string content) => new(HttpStatusCode.OK)
     {
         Content = new StringContent(content, Encoding.UTF8, "application/json")
