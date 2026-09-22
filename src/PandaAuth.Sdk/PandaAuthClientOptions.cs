@@ -2,7 +2,7 @@ namespace PandaAuth.Sdk;
 
 /// <summary>
 /// 内部业务应用接入 PandaAuth 的客户端选项。
-/// Phase 1 实装完整 SDK 客户端（token 管理、userinfo 封装、角色 Claim 读取）。
+/// SDK 协议客户端选项。SDK 不持久化 state、PKCE verifier 或 token。
 /// </summary>
 public sealed class PandaAuthClientOptions
 {
