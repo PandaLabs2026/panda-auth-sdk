@@ -3,10 +3,25 @@
   <PropertyGroup>
     <RootNamespace>PandaAuth.Sdk</RootNamespace>
     <AssemblyName>PandaAuth.Sdk</AssemblyName>
-    <IsPackable>false</IsPackable>
-    <!-- Phase 1 作为内部 NuGet 包发布时启用 -->
+    <IsPackable>true</IsPackable>
+    <PackageId>PandaAuth.Sdk</PackageId>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionSuffix>preview.1</VersionSuffix>
+    <Authors>PandaLabs</Authors>
+    <Company>PandaLabs</Company>
+    <Description>Stateless provider-neutral OIDC client for PandaAuth.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/PandaLabs2026/panda-auth-sdk</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/PandaLabs2026/panda-auth-sdk.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>panda-auth;openid;oauth2;oidc;pkce</PackageTags>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- 跨仓共享契约；要求 panda-auth-share 与本仓同级克隆（工作区布局见元仓 WORKSPACE.md） -->
