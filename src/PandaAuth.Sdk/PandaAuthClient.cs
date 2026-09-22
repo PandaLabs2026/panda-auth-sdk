@@ -24,6 +24,7 @@ public sealed class PandaAuthClient
 
     public PandaAuthAuthorizationRequest CreateAuthorizationRequest()
     {
+        RequireRedirectUri();
         var state = CreateRandomString(32);
         var verifier = CreateRandomString(64);
         var challenge = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
@@ -65,6 +66,7 @@ public sealed class PandaAuthClient
 
     public async Task<PandaAuthTokenResponse> ExchangeCodeAsync(string code, string codeVerifier, CancellationToken cancellationToken = default)
     {
+        RequireRedirectUri();
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
         ArgumentException.ThrowIfNullOrWhiteSpace(codeVerifier);
         var discovery = await GetDiscoveryAsync(cancellationToken).ConfigureAwait(false);
@@ -79,6 +81,8 @@ public sealed class PandaAuthClient
 
     public async Task<PandaAuthTokenResponse> GetClientCredentialsTokenAsync(CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(_options.ClientSecret))
+            throw new InvalidOperationException("Client credentials flow requires a client secret.");
         var discovery = await GetDiscoveryAsync(cancellationToken).ConfigureAwait(false);
         return await PostTokenAsync(discovery.TokenEndpoint, new Dictionary<string, string>
         {
@@ -173,7 +177,12 @@ public sealed class PandaAuthClient
         if (!Uri.TryCreate(_options.Issuer, UriKind.Absolute, out var issuer) || issuer.Scheme != Uri.UriSchemeHttps)
             throw new ArgumentException("Issuer must be an absolute HTTPS URI.", nameof(_options));
         ArgumentException.ThrowIfNullOrWhiteSpace(_options.ClientId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(_options.RedirectUri);
+    }
+
+    private void RequireRedirectUri()
+    {
+        if (!Uri.TryCreate(_options.RedirectUri, UriKind.Absolute, out var redirect) || redirect.Scheme != Uri.UriSchemeHttps)
+            throw new ArgumentException("RedirectUri must be an absolute HTTPS URI for the authorization-code flow.", nameof(_options));
     }
 
     private static string RequireEndpoint(string? endpoint, string name)

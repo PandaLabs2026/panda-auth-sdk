@@ -16,6 +16,8 @@ PandaAuth 的 .NET 接入 SDK 仓，依赖同级 [panda-auth-share](https://gith
 
 [项目配置](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj)仍为 `IsPackable=false`。测试位于 [PandaAuth.Sdk.Tests](tests/PandaAuth.Sdk.Tests)，不提供已发布 NuGet 包或包安装命令。
 
+本仓提供一个可执行的 [M2M 示例](samples/PandaAuth.Sdk.M2m/README.md)，演示 discovery + client credentials；示例不输出或保存 Access Token。Web/浏览器示例仍需真实环境验收。
+
 Web、MAUI、桌面、Blazor 等客户端封装与示例按需求推进；不能由协议支持推断全平台 SDK 已交付。现有 Web 示例在 [Server DemoClient](https://github.com/PandaLabs2026/panda-auth-server/tree/main/samples/PandaAuth.DemoClient)，不属于本仓 SDK 验收证据。
 
 ## 构建
