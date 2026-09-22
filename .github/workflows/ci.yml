@@ -1,0 +1,45 @@
+name: SDK CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout SDK
+        uses: actions/checkout@v4
+        with:
+          path: panda-auth-sdk
+      - name: Checkout Share
+        uses: actions/checkout@v4
+        with:
+          repository: PandaLabs2026/panda-auth-share
+          path: panda-auth-share
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        working-directory: panda-auth-sdk
+        run: dotnet restore PandaAuth.Sdk.slnx --nologo -m:1
+      - name: Build
+        working-directory: panda-auth-sdk
+        run: dotnet build PandaAuth.Sdk.slnx --nologo -m:1 --no-restore
+      - name: Test
+        working-directory: panda-auth-sdk
+        run: dotnet test tests/PandaAuth.Sdk.Tests/PandaAuth.Sdk.Tests.csproj --nologo -m:1 --no-restore
+      - name: Pack preview
+        working-directory: panda-auth-sdk
+        run: dotnet pack src/PandaAuth.Sdk/PandaAuth.Sdk.csproj --nologo --no-restore -c Release -o artifacts
+      - name: Upload package evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: panda-auth-sdk-preview-package
+          path: panda-auth-sdk/artifacts/*.nupkg
+          if-no-files-found: error
