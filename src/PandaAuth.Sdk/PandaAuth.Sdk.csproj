@@ -5,8 +5,7 @@
     <AssemblyName>PandaAuth.Sdk</AssemblyName>
     <IsPackable>true</IsPackable>
     <PackageId>PandaAuth.Sdk</PackageId>
-    <VersionPrefix>0.2.0</VersionPrefix>
-    <VersionSuffix>preview.1</VersionSuffix>
+    <VersionPrefix>1.0.0</VersionPrefix>
     <Authors>PandaLabs</Authors>
     <Company>PandaLabs</Company>
     <Description>Stateless provider-neutral OIDC client for PandaAuth.</Description>
