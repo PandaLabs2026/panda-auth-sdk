@@ -3,7 +3,7 @@
 This sample demonstrates discovery followed by the client-credentials flow. It does not store or print the access token.
 
 ```bash
-export PANDA_AUTH_ISSUER=https://auth.pandalabs.cc
+export PANDA_AUTH_ISSUER=https://auth.pandalabs.cn
 export PANDA_AUTH_CLIENT_ID=your-client-id
 export PANDA_AUTH_CLIENT_SECRET=your-client-secret
 dotnet run --project samples/PandaAuth.Sdk.M2m/PandaAuth.Sdk.M2m.csproj
