@@ -2,7 +2,7 @@
 
 **PandaAuth by PandaLabs** · [English](README.en.md)
 
-> 研发阶段，尚无正式受支持发行版；接入采用邀请或申请口径。已有实现不等于已完成发行验证。
+> PandaAuth 套件当前为 **Community Preview 0.2.0-preview.1**：已部署生产、面向早期社区试用；稳定版 Community Release 1.0.0 尚未发布。接入采用邀请或申请口径。
 
 ## 职责与边界
 
@@ -14,7 +14,7 @@ PandaAuth 的 .NET 接入 SDK 仓，依赖同级 [panda-auth-share](https://gith
 
 授权码流程由 `CreateAuthorizationRequestAsync` 生成授权 URL、state 和 PKCE verifier；调用方必须校验回调 state，并把 verifier 传入 `ExchangeCodeAsync`。本阶段不包含 provider adapter、本地 JWT/JWKS 校验、introspection、Web/Maui/桌面封装，也不承诺具体外部 provider。
 
-[项目配置](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj)已发布 **1.0.0** 正式包（包内包含本 README、根目录 MIT 许可证正文和许可证元数据），经 GitHub Release 分发，构成 1.0 支持承诺。测试位于 [PandaAuth.Sdk.Tests](tests/PandaAuth.Sdk.Tests)。
+[项目配置](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj)已发布 **1.0.0** 正式包（包内包含本 README、根目录 MIT 许可证正文和许可证元数据），经 GitHub Release 分发，构成 1.0 支持承诺（组件版本承诺，独立于套件对外版本）。测试位于 [PandaAuth.Sdk.Tests](tests/PandaAuth.Sdk.Tests)。
 
 本仓提供一个可执行的 [M2M 示例](samples/PandaAuth.Sdk.M2m/README.md)，演示 discovery + client credentials；示例不输出或保存 Access Token。Web/浏览器示例仍需真实环境验收。
 
