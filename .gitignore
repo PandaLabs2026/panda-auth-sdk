@@ -11,3 +11,6 @@ TestResults/
 Thumbs.db
 .DS_Store
 .zcode/
+
+# 仓级 AI 协作规则本地副本,不入公开仓
+AGENTS.md
