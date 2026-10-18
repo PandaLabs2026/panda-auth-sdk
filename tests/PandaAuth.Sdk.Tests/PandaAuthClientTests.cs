@@ -39,6 +39,25 @@ public sealed class PandaAuthClientTests
     }
 
     [Fact]
+    public void EndSessionUrlCarriesOnlyCallerSuppliedParameters()
+    {
+        using var handler = new FakeHttpMessageHandler();
+        var client = CreateClient(handler);
+
+        var url = client.CreateEndSessionUrl(
+            idTokenHint: "id-token-1",
+            postLogoutRedirectUri: "https://app.example/logout",
+            state: "state-1");
+
+        Assert.Equal("https", url.Scheme);
+        Assert.Equal("/connect/logout", url.AbsolutePath);
+        Assert.Contains("id_token_hint=id-token-1", url.Query);
+        Assert.Contains("post_logout_redirect_uri=https%3A%2F%2Fapp.example%2Flogout", url.Query);
+        Assert.Contains("state=state-1", url.Query);
+        Assert.Equal("https://issuer.example/connect/logout", client.CreateEndSessionUrl().ToString());
+    }
+
+    [Fact]
     public async Task ExchangeCodeDiscoversEndpointAndSendsPkceVerifier()
     {
         using var handler = new FakeHttpMessageHandler((request, _) =>
