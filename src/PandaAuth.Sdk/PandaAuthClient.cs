@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PandaAuth.Shared;
 
 namespace PandaAuth.Sdk;
 
@@ -126,6 +127,23 @@ public sealed class PandaAuthClient
         if (!string.IsNullOrWhiteSpace(tokenTypeHint)) values["token_type_hint"] = tokenTypeHint;
         using var response = await _httpClient.PostAsync(endpoint, new FormUrlEncodedContent(AddClientCredentials(values)), cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Builds the RP-initiated logout URL. The caller owns navigation and local-cookie
+    /// sign-out; this method only constructs the protocol request.
+    /// </summary>
+    public Uri CreateEndSessionUrl(
+        string? idTokenHint = null,
+        string? postLogoutRedirectUri = null,
+        string? state = null)
+    {
+        var endpoint = new Uri(_options.Issuer.TrimEnd('/') + PandaAuthEndpoints.Logout);
+        var query = new Dictionary<string, string>();
+        if (!string.IsNullOrWhiteSpace(idTokenHint)) query["id_token_hint"] = idTokenHint;
+        if (!string.IsNullOrWhiteSpace(postLogoutRedirectUri)) query["post_logout_redirect_uri"] = postLogoutRedirectUri;
+        if (!string.IsNullOrWhiteSpace(state)) query["state"] = state;
+        return query.Count == 0 ? endpoint : AddQuery(endpoint, query);
     }
 
     private async Task<PandaAuthTokenResponse> PostTokenAsync(string? endpoint, Dictionary<string, string> values, CancellationToken cancellationToken)
