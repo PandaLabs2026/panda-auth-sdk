@@ -115,7 +115,11 @@ public sealed class PandaAuthClient
         var root = document.RootElement.Clone();
         var subject = root.TryGetProperty("sub", out var sub) ? sub.GetString() : null;
         if (string.IsNullOrWhiteSpace(subject)) throw new InvalidOperationException("userinfo response did not provide sub.");
-        return new PandaAuthUserInfo(subject, GetString(root, "name"), GetString(root, "email"), GetStringArray(root, "roles"), root);
+        // The IDP emits "role"; retain the existing plural alias for callers
+        // using older/custom userinfo payloads. One role can be a JSON string.
+        var roles = GetStringArray(root, "role").Concat(GetStringArray(root, "roles"))
+            .Distinct(StringComparer.Ordinal).ToArray();
+        return new PandaAuthUserInfo(subject, GetString(root, "name"), GetString(root, "email"), roles, root);
     }
 
     public async Task RevokeAsync(string token, string? tokenTypeHint = null, CancellationToken cancellationToken = default)
@@ -209,9 +213,12 @@ public sealed class PandaAuthClient
 
     private static string? GetString(JsonElement root, string name) => root.TryGetProperty(name, out var value) ? value.GetString() : null;
     private static IReadOnlyList<string> GetStringArray(JsonElement root, string name)
-        => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array
-            ? value.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToArray()
-            : [];
+        => !root.TryGetProperty(name, out var value) ? [] : value.ValueKind switch
+        {
+            JsonValueKind.String => [value.GetString()!],
+            JsonValueKind.Array => value.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToArray(),
+            _ => [],
+        };
 
     private static Uri AddQuery(Uri endpoint, IEnumerable<KeyValuePair<string, string>> values)
         => new(endpoint + (endpoint.Query.Length == 0 ? "?" : "&") + string.Join('&', values.Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value)}")));

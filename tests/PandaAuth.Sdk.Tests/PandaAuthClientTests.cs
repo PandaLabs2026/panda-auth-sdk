@@ -107,6 +107,21 @@ public sealed class PandaAuthClientTests
         Assert.Equal("user-1", userInfo.Claims.GetProperty("sub").GetString());
     }
 
+    [Theory]
+    [InlineData("""{"sub":"user-1","role":"admin"}""", new string[] { "admin" })]
+    [InlineData("""{"sub":"user-1","role":["admin","operator"]}""", new string[] { "admin", "operator" })]
+    [InlineData("""{"sub":"user-1","role":["admin","operator"],"roles":["operator"]}""", new string[] { "admin", "operator" })]
+    [InlineData("""{"sub":"user-1","roles":"admin"}""", new string[] { "admin" })]
+    public async Task UserInfoProjectsProviderRoleClaimAndLegacyRoles(string payload, string[] expected)
+    {
+        using var handler = new FakeHttpMessageHandler((request, _) =>
+            request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration"
+                ? Json("""{"userinfo_endpoint":"https://issuer.example/connect/userinfo"}""")
+                : Json(payload));
+        var info = await CreateClient(handler).GetUserInfoAsync("fixture-access-token");
+        Assert.Equal(expected, info.Roles);
+    }
+
     [Fact]
     public async Task ProtocolFailureIncludesSafeErrorDetails()
     {
