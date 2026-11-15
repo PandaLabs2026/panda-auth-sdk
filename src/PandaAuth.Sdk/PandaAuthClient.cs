@@ -11,16 +11,55 @@ namespace PandaAuth.Sdk;
 /// <summary>
 /// Stateless OIDC client. The caller owns state, code verifiers and all tokens.
 /// </summary>
-public sealed class PandaAuthClient
+public sealed class PandaAuthClient : IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly PandaAuthClientOptions _options;
 
+    private readonly bool _networkAllowed;
+    private readonly bool _ownsHttpClient;
+
+    // Kept for source compatibility with URL-only builders. An opaque HttpClient
+    // cannot prove that automatic redirects are disabled.
     public PandaAuthClient(HttpClient httpClient, PandaAuthClientOptions options)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _options = Snapshot(options);
         ValidateOptions();
+    }
+
+    public PandaAuthClient(PandaAuthClientOptions options)
+        : this(new HttpClientHandler { AllowAutoRedirect = false }, options) { }
+
+    /// <summary>The application trusts custom transport handlers; they must not redirect or retry requests.</summary>
+    public PandaAuthClient(HttpMessageHandler handler, PandaAuthClientOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        switch (handler)
+        {
+            case HttpClientHandler native: native.AllowAutoRedirect = false; break;
+            case SocketsHttpHandler sockets: sockets.AllowAutoRedirect = false; break;
+            case DelegatingHandler: throw new ArgumentException("Use a direct transport without redirecting delegates.", nameof(handler));
+        }
+        _options = Snapshot(options);
+        ValidateOptions();
+        _httpClient = new HttpClient(handler, disposeHandler: true);
+        _networkAllowed = true;
+        _ownsHttpClient = true;
+    }
+
+    public void Dispose()
+    {
+        if (_ownsHttpClient) _httpClient.Dispose();
+    }
+
+    private static PandaAuthClientOptions Snapshot(PandaAuthClientOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        return new PandaAuthClientOptions {
+            Issuer = options.Issuer, ClientId = options.ClientId, ClientSecret = options.ClientSecret,
+            RedirectUri = options.RedirectUri, Scopes = options.Scopes.ToArray()
+        };
     }
 
     public PandaAuthAuthorizationRequest CreateAuthorizationRequest()
@@ -60,9 +99,23 @@ public sealed class PandaAuthClient
 
     public async Task<PandaAuthDiscoveryDocument> GetDiscoveryAsync(CancellationToken cancellationToken = default)
     {
+        if (!_networkAllowed)
+            throw new InvalidOperationException("Network operations require the options-only or direct-handler constructor; opaque HttpClient redirects cannot be verified.");
         var discoveryUri = new Uri(new Uri(_options.Issuer.TrimEnd('/') + "/"), ".well-known/openid-configuration");
         using var response = await _httpClient.GetAsync(discoveryUri, cancellationToken).ConfigureAwait(false);
-        return await ReadJsonAsync<PandaAuthDiscoveryDocument>(response, cancellationToken).ConfigureAwait(false);
+        using var document = await ReadDocumentAsync(response, cancellationToken).ConfigureAwait(false);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        if (document.RootElement.ValueKind != JsonValueKind.Object ||
+            document.RootElement.EnumerateObject().Any(property => !names.Add(property.Name)))
+            throw new InvalidOperationException("OIDC discovery must be an object without duplicate properties.");
+        var metadata = document.RootElement.Deserialize<PandaAuthDiscoveryDocument>()
+            ?? throw new InvalidOperationException("OIDC discovery is empty.");
+        if (!string.Equals(metadata.Issuer, _options.Issuer, StringComparison.Ordinal))
+            throw new InvalidOperationException("OIDC discovery issuer does not exactly match the configured issuer.");
+        foreach (var endpoint in new[] { metadata.AuthorizationEndpoint, metadata.TokenEndpoint,
+            metadata.UserInfoEndpoint, metadata.RevocationEndpoint, metadata.IntrospectionEndpoint })
+            if (endpoint is not null) RequireEndpoint(endpoint, "endpoint");
+        return metadata;
     }
 
     public async Task<PandaAuthTokenResponse> ExchangeCodeAsync(string code, string codeVerifier, CancellationToken cancellationToken = default)
@@ -196,7 +249,7 @@ public sealed class PandaAuthClient
 
     private void ValidateOptions()
     {
-        if (!Uri.TryCreate(_options.Issuer, UriKind.Absolute, out var issuer) || issuer.Scheme != Uri.UriSchemeHttps)
+        if (!IsHttpsEndpoint(_options.Issuer, out var issuer) || issuer!.Query.Length != 0)
             throw new ArgumentException("Issuer must be an absolute HTTPS URI.", nameof(_options));
         ArgumentException.ThrowIfNullOrWhiteSpace(_options.ClientId);
     }
@@ -207,9 +260,18 @@ public sealed class PandaAuthClient
             throw new ArgumentException("RedirectUri must be an absolute HTTPS URI for the authorization-code flow.", nameof(_options));
     }
 
+    private static bool IsHttpsEndpoint(string? endpoint, out Uri? uri)
+    {
+        uri = null;
+        return !string.IsNullOrWhiteSpace(endpoint) && !endpoint.Any(char.IsWhiteSpace) &&
+            !endpoint.Any(char.IsControl) && Uri.TryCreate(endpoint, UriKind.Absolute, out uri) &&
+            uri.IsWellFormedOriginalString() && uri.Scheme == Uri.UriSchemeHttps &&
+            uri.Host.Length != 0 && uri.UserInfo.Length == 0 && uri.Fragment.Length == 0;
+    }
+
     private static string RequireEndpoint(string? endpoint, string name)
-        => !string.IsNullOrWhiteSpace(endpoint) && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
-            ? uri.ToString() : throw new InvalidOperationException($"OIDC discovery did not provide {name}.");
+        => IsHttpsEndpoint(endpoint, out _) ? endpoint!
+            : throw new InvalidOperationException($"OIDC discovery did not provide a safe HTTPS {name}.");
 
     private static string? GetString(JsonElement root, string name) => root.TryGetProperty(name, out var value) ? value.GetString() : null;
     private static IReadOnlyList<string> GetStringArray(JsonElement root, string name)

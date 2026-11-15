@@ -6,7 +6,7 @@ namespace PandaAuth.Sdk;
 /// </summary>
 public sealed class PandaAuthClientOptions
 {
-    /// <summary>服务端 Issuer，单域名 https://auth.pandalabs.cn（2026-09-24 迁移定案）。</summary>
+    /// <summary>唯一可信 HTTPS issuer；与 discovery 精确匹配，包含尾斜线，不推导迁移别名。</summary>
     public string Issuer { get; set; } = string.Empty;
 
     public string ClientId { get; set; } = string.Empty;

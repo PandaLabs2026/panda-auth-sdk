@@ -47,3 +47,15 @@ dotnet build PandaAuth.Sdk.slnx
 - [安全政策](SECURITY.md)：选定私密报告渠道，启用状态未核验；不公开提交漏洞细节。
 - [贡献指南](CONTRIBUTING.md)：本仓检查与统一贡献规则。
 - [MIT License](LICENSE)：适用于自有代码和文档，具体范围见[许可说明](LICENSING.md)；第三方许可仍适用，品牌图片除外。
+
+## Discovery 信任与 2.0 迁移
+
+源码候选为 SDK 2.0.0 / Share 1.0.1，尚未正式供包或部署。以前分发的 1.0.0 只代表历史版本证据。
+
+网络调用使用 `using var client = new PandaAuthClient(options)`，默认保留 TLS 证书验证并禁用自动重定向。可注入应用信任的直接 `HttpMessageHandler`：SDK 为原生 handler 关闭重定向、拒绝委托链并负责释放 handler；自定义传输不得重定向或重试携密请求。
+
+原 `(HttpClient, options)` 构造保留给同步 URL 构造（含 BFF logout），其网络调用现在在发出任何请求前拒绝，因为无法验证不透明 HttpClient 的重定向策略。网络消费者须迁移到安全构造。配置在构造时冻结。
+
+Discovery 的 `issuer` 必须与唯一配置逐字符精确一致，包含尾斜线、大小写与路径。所有已声明端点必须是无 userinfo/fragment/空白的绝对 HTTPS URI；缺少可选端点在使用时拒绝。可信 issuer 可以声明不同 HTTPS 主机的端点。元数据校验失败不会发送授权码、verifier、secret、刷新/访问或吊销令牌。重定向响应作为错误，不跟随。主机迁移别名不代表 issuer 等价。
+
+SDK 不验证 ID Token 签名/audience/nonce，也不拥有浏览器 state/session；完整 OIDC 登录处理器继续负责这些检查。SDK 与 Share 独立版本，不表示本批已经发布或全组织采用。

@@ -1,6 +1,6 @@
 using PandaAuth.Sdk;
 
-var client = new PandaAuthClient(new HttpClient(), new PandaAuthClientOptions
+using var client = new PandaAuthClient(new PandaAuthClientOptions
 {
     Issuer = Required("PANDA_AUTH_ISSUER"),
     ClientId = Required("PANDA_AUTH_CLIENT_ID"),
