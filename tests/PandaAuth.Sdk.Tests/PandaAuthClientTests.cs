@@ -10,8 +10,7 @@ public sealed class PandaAuthClientTests
 {
     private static PandaAuthClient CreateClient(FakeHttpMessageHandler handler)
     {
-        var httpClient = new HttpClient(handler);
-        return new PandaAuthClient(httpClient, new PandaAuthClientOptions
+        return new PandaAuthClient(handler, new PandaAuthClientOptions
         {
             Issuer = "https://issuer.example",
             ClientId = "web-client",
@@ -64,7 +63,7 @@ public sealed class PandaAuthClientTests
         {
             if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
             {
-                return Json("""{"token_endpoint":"https://issuer.example/connect/token","userinfo_endpoint":"https://issuer.example/connect/userinfo","revocation_endpoint":"https://issuer.example/connect/revoke"}""");
+                return Json("""{"issuer":"https://issuer.example","token_endpoint":"https://issuer.example/connect/token","userinfo_endpoint":"https://issuer.example/connect/userinfo","revocation_endpoint":"https://issuer.example/connect/revoke"}""");
             }
 
             Assert.Equal("/connect/token", request.RequestUri.AbsolutePath);
@@ -90,7 +89,7 @@ public sealed class PandaAuthClientTests
         {
             if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
             {
-                return Json("""{"userinfo_endpoint":"https://issuer.example/connect/userinfo"}""");
+                return Json("""{"issuer":"https://issuer.example","userinfo_endpoint":"https://issuer.example/connect/userinfo"}""");
             }
 
             Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
@@ -116,7 +115,7 @@ public sealed class PandaAuthClientTests
     {
         using var handler = new FakeHttpMessageHandler((request, _) =>
             request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration"
-                ? Json("""{"userinfo_endpoint":"https://issuer.example/connect/userinfo"}""")
+                ? Json("""{"issuer":"https://issuer.example","userinfo_endpoint":"https://issuer.example/connect/userinfo"}""")
                 : Json(payload));
         var info = await CreateClient(handler).GetUserInfoAsync("fixture-access-token");
         Assert.Equal(expected, info.Roles);
@@ -148,7 +147,7 @@ public sealed class PandaAuthClientTests
             calls.Add(request.RequestUri!.AbsolutePath);
             if (request.RequestUri.AbsolutePath == "/.well-known/openid-configuration")
             {
-                return Json("""{"token_endpoint":"https://issuer.example/connect/token","revocation_endpoint":"https://issuer.example/connect/revoke"}""");
+                return Json("""{"issuer":"https://issuer.example","token_endpoint":"https://issuer.example/connect/token","revocation_endpoint":"https://issuer.example/connect/revoke"}""");
             }
 
             if (request.RequestUri.AbsolutePath == "/connect/token")
@@ -173,11 +172,11 @@ public sealed class PandaAuthClientTests
         using var handler = new FakeHttpMessageHandler((request, _) =>
         {
             if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
-                return Json("""{"token_endpoint":"https://issuer.example/connect/token"}""");
+                return Json("""{"issuer":"https://issuer.example","token_endpoint":"https://issuer.example/connect/token"}""");
 
             return Json("""{"access_token":"service-access","token_type":"Bearer","expires_in":600}""");
         });
-        var client = new PandaAuthClient(new HttpClient(handler), new PandaAuthClientOptions
+        var client = new PandaAuthClient(handler, new PandaAuthClientOptions
         {
             Issuer = "https://issuer.example",
             ClientId = "service-client",
@@ -188,6 +187,100 @@ public sealed class PandaAuthClientTests
         var token = await client.GetClientCredentialsTokenAsync();
 
         Assert.Equal("service-access", token.AccessToken);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"issuer\":\"https://attacker.example\",\"token_endpoint\":\"https://attacker.example/token\"}")]
+    [InlineData("{\"issuer\":\"https://issuer.example/\",\"token_endpoint\":\"https://issuer.example/token\"}")]
+    [InlineData("{\"issuer\":\"https://issuer.example\",\"token_endpoint\":\"http://issuer.example/token\"}")]
+    [InlineData("{\"issuer\":\"https://issuer.example\",\"token_endpoint\":\"/token\"}")]
+    [InlineData("{\"issuer\":\"https://issuer.example\",\"token_endpoint\":\"https://user:pass@issuer.example/token\"}")]
+    [InlineData("{\"issuer\":\"https://issuer.example\",\"token_endpoint\":\"https://issuer.example/token#fragment\"}")]
+    [InlineData("{\"issuer\":\"https://issuer.example\",\"token_endpoint\":\"https://issuer.example/token\",\"userinfo_endpoint\":\"http://unsafe.example/info\"}")]
+    public async Task InvalidMetadataNeverSendsCredentials(string metadata)
+    {
+        var requests = new List<string>();
+        using var handler = new FakeHttpMessageHandler((request, _) => {
+            requests.Add(request.RequestUri!.AbsoluteUri);
+            return request.RequestUri.AbsolutePath == "/.well-known/openid-configuration"
+                ? Json(metadata) : Json("{\"access_token\":\"unexpected\",\"token_type\":\"Bearer\"}");
+        });
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateClient(handler).GetClientCredentialsTokenAsync());
+        Assert.Single(requests);
+    }
+
+    [Fact]
+    public async Task TrustedIssuerCanDelegateTokenEndpointToAnotherHttpsHost()
+    {
+        using var handler = new FakeHttpMessageHandler((request, _) => {
+            if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
+                return Json("""{"issuer":"https://issuer.example","token_endpoint":"https://tokens.example/exchange"}""");
+            Assert.Equal("tokens.example", request.RequestUri.Host);
+            return Json("""{"access_token":"valid","token_type":"Bearer"}""");
+        });
+        Assert.Equal("valid", (await CreateClient(handler).GetClientCredentialsTokenAsync()).AccessToken);
+    }
+
+    [Fact]
+    public async Task OpaqueHttpClientFailsBeforeAnyNetworkRequest()
+    {
+        var calls = 0;
+        using var handler = new FakeHttpMessageHandler((_, _) => { calls++; return Json("{}"); });
+        using var http = new HttpClient(handler);
+        using var client = new PandaAuthClient(http, new PandaAuthClientOptions { Issuer = "https://issuer.example", ClientId = "fixture", ClientSecret = "fixture-secret" });
+        await Assert.ThrowsAsync<InvalidOperationException>(() => client.GetClientCredentialsTokenAsync());
+        Assert.Equal(0, calls);
+        Assert.Equal("/connect/logout", client.CreateEndSessionUrl().AbsolutePath);
+    }
+
+    [Fact]
+    public async Task CallerCannotChangeTrustedIssuerAfterConstruction()
+    {
+        using var handler = new FakeHttpMessageHandler((request, _) => {
+            Assert.Equal("issuer.example", request.RequestUri!.Host);
+            return Json("""{"issuer":"https://issuer.example"}""");
+        });
+        var options = new PandaAuthClientOptions { Issuer = "https://issuer.example", ClientId = "fixture" };
+        using var client = new PandaAuthClient(handler, options);
+        options.Issuer = "https://attacker.example";
+        Assert.Equal("https://issuer.example", (await client.GetDiscoveryAsync()).Issuer);
+    }
+
+    [Theory]
+    [InlineData("https://issuer.example/?query=yes")]
+    [InlineData("https://issuer.example/#fragment")]
+    [InlineData("https://user@issuer.example/")]
+    [InlineData(" https://issuer.example")]
+    [InlineData("http://issuer.example")]
+    public void RejectsAmbiguousIssuerConfiguration(string issuer)
+    {
+        using var handler = new FakeHttpMessageHandler();
+        Assert.Throws<ArgumentException>(() => new PandaAuthClient(handler, new PandaAuthClientOptions { Issuer = issuer, ClientId = "fixture" }));
+    }
+
+    [Theory]
+    [InlineData("code")]
+    [InlineData("refresh")]
+    [InlineData("userinfo")]
+    [InlineData("revoke")]
+    public async Task WrongIssuerBlocksEveryCredentialBearingOperation(string operation)
+    {
+        var calls = 0;
+        using var handler = new FakeHttpMessageHandler((_, _) => {
+            calls++;
+            return Json("""{"issuer":"https://attacker.example","token_endpoint":"https://attacker.example/token","userinfo_endpoint":"https://attacker.example/info","revocation_endpoint":"https://attacker.example/revoke"}""");
+        });
+        var client = CreateClient(handler);
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => {
+            switch (operation) {
+                case "code": await client.ExchangeCodeAsync("fixture-code", "fixture-verifier"); break;
+                case "refresh": await client.RefreshTokenAsync("fixture-refresh"); break;
+                case "userinfo": await client.GetUserInfoAsync("fixture-access"); break;
+                default: await client.RevokeAsync("fixture-token"); break;
+            }
+        });
+        Assert.Equal(1, calls);
     }
 
     private static HttpResponseMessage Json(string content) => new(HttpStatusCode.OK)

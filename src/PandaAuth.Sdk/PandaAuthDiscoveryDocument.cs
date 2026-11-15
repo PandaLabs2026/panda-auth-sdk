@@ -7,7 +7,8 @@ public sealed record PandaAuthDiscoveryDocument(
     [property: JsonPropertyName("token_endpoint")] string? TokenEndpoint,
     [property: JsonPropertyName("userinfo_endpoint")] string? UserInfoEndpoint,
     [property: JsonPropertyName("revocation_endpoint")] string? RevocationEndpoint,
-    [property: JsonPropertyName("introspection_endpoint")] string? IntrospectionEndpoint);
+    [property: JsonPropertyName("introspection_endpoint")] string? IntrospectionEndpoint,
+    [property: JsonPropertyName("issuer")] string? Issuer = null);
 
 public sealed record PandaAuthAuthorizationRequest(Uri Uri, string State, string CodeVerifier);
 

@@ -18,7 +18,7 @@ Web, MAUI, desktop and Blazor wrappers/samples will follow actual needs. Protoco
 
 ## Build
 
-Use the .NET SDK selected by [global.json](global.json) (currently 10.0.112 with latestFeature roll-forward). This repository can be built without the private PandaAuth coordination repository; clone the public Share repository beside it:
+Use the .NET SDK selected by [global.json](global.json) (10.0.404, exact stable SDK). This repository can be built without the private PandaAuth coordination repository; clone the public Share repository beside it:
 
 ```bash
 git clone https://github.com/PandaLabs2026/panda-auth-sdk.git
@@ -41,3 +41,15 @@ Product roadmap, release gates and community/commercial boundaries remain mainta
 - [Security](SECURITY.md): selected private reporting channel, enablement unverified; no public vulnerability details.
 - [Contributing](CONTRIBUTING.md): repository-specific checks and the shared contribution policy.
 - [MIT License](LICENSE) for project-owned code/documentation, subject to [license scope](LICENSING.md); third-party terms remain applicable and brand images are excluded.
+
+## Discovery trust / 2.0 migration
+
+Source candidate: SDK 2.0.0 with Share 1.0.1; these changes have not been published as packages or deployed. Previously distributed 1.0.0 remains historical release evidence.
+
+Use `using var client = new PandaAuthClient(options)` for network calls. This creates a TLS-validating transport with automatic redirects disabled. Direct `HttpMessageHandler` injection is available for trusted application transports; the SDK disables redirects on native handlers, rejects delegating handlers, and owns the supplied handler. Custom transports must never redirect or retry credential requests.
+
+The existing `(HttpClient, options)` constructor remains usable for synchronous URL builders (including BFF logout), but network methods now fail before any request: an opaque HttpClient cannot establish safe redirect policy. Migrate network callers to the options constructor. Options are snapshotted at construction.
+
+Discovery `issuer` must match the one configured issuer exactly, including trailing slash, case and path. Every advertised endpoint must be an absolute HTTPS URI without userinfo, fragment or whitespace; missing optional endpoints fail when used. A valid issuer may advertise another HTTPS host. Metadata failure sends no code, verifier, client secret, refresh/access token or revocation token. Redirect responses are errors, with no follow-up request. Host migration aliases never imply issuer equivalence.
+
+This client does not validate ID Token signatures/audience/nonce or own browser state/session. A complete OIDC login handler remains responsible for those checks. SDK and Share versions evolve independently; no package publication or organization-wide adoption is implied.
