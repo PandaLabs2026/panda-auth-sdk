@@ -16,7 +16,7 @@ PandaAuth 的 .NET 接入 SDK 仓，依赖同级 [panda-auth-share](https://gith
 
 授权码流程由 `CreateAuthorizationRequestAsync` 生成授权 URL、state 和 PKCE verifier；调用方必须校验回调 state，并把 verifier 传入 `ExchangeCodeAsync`。本阶段不包含 provider adapter、本地 JWT/JWKS 校验、introspection、Web/Maui/桌面封装，也不承诺具体外部 provider。
 
-[项目配置](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj)已发布 **1.0.0** 正式包（包内包含本 README、根目录 MIT 许可证正文和许可证元数据），经 GitHub Release 分发，构成 1.0 支持承诺（组件版本承诺，独立于套件对外版本）。测试位于 [PandaAuth.Sdk.Tests](tests/PandaAuth.Sdk.Tests)。
+[项目配置](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj)当前为 **0.2.0-preview.1** 开发候选（包含本README、MIT许可证正文及元数据）。2026-11-17组织政策要求首个正式市场版前所有组件使用0.x；旧1.x/2.x包和接受材料保留历史身份，不授予新候选发行资格。测试位于 [PandaAuth.Sdk.Tests](tests/PandaAuth.Sdk.Tests)。
 
 本仓提供一个可执行的 [M2M 示例](samples/PandaAuth.Sdk.M2m/README.md)，演示 discovery + client credentials；示例不输出或保存 Access Token。Web/浏览器示例仍需真实环境验收。
 
@@ -48,9 +48,9 @@ dotnet build PandaAuth.Sdk.slnx
 - [贡献指南](CONTRIBUTING.md)：本仓检查与统一贡献规则。
 - [MIT License](LICENSE)：适用于自有代码和文档，具体范围见[许可说明](LICENSING.md)；第三方许可仍适用，品牌图片除外。
 
-## Discovery 信任与 2.0 迁移
+## Discovery 信任与预发布迁移
 
-源码候选为 SDK 2.0.0 / Share 1.0.1，尚未正式供包或部署。以前分发的 1.0.0 只代表历史版本证据。
+源码候选为 SDK / Share **0.2.0-preview.1**，尚未公开供包或部署。先前1.x/2.x只是历史版本证据，不再作为当前候选。两个包均须显式精确选择 `[0.2.0-preview.1]`，避免回落历史高版本；这次重定基不表示API恢复旧行为。
 
 网络调用使用 `using var client = new PandaAuthClient(options)`，默认保留 TLS 证书验证并禁用自动重定向。可注入应用信任的直接 `HttpMessageHandler`：SDK 为原生 handler 关闭重定向、拒绝委托链并负责释放 handler；自定义传输不得重定向或重试携密请求。
 
