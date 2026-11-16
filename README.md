@@ -8,11 +8,11 @@
 
 ## Responsibility and boundaries
 
-The .NET integration SDK repository for PandaAuth, depending on sibling [panda-auth-share](https://github.com/PandaLabs2026/panda-auth-share). The SDK is intended to version independently of product releases.
+The .NET integration SDK repository for PandaAuth, depending on sibling [panda-auth-share](https://github.com/PandaLabs2026/panda-auth-share). The SDK has an independently reviewed 0.x release cadence before the first formal market launch.
 
 ## Current implementation and limitations
 
-The stateless [PandaAuthClient](src/PandaAuth.Sdk/PandaAuthClient.cs) provides the minimum OIDC capabilities: discovery, authorization code + PKCE, client credentials, refresh token, userinfo and revoke. It does not persist state, PKCE verifiers, access tokens or refresh tokens. The [project](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj) ships the **1.0.0** package (including this README and the MIT license text), distributed via GitHub Releases as a 1.0 support commitment (a component-level commitment, separate from the suite's public version).
+The stateless [PandaAuthClient](src/PandaAuth.Sdk/PandaAuthClient.cs) provides the minimum OIDC capabilities: discovery, authorization code + PKCE, client credentials, refresh token, userinfo and revoke. It does not persist state, PKCE verifiers, access tokens or refresh tokens. The [project](src/PandaAuth.Sdk/PandaAuth.Sdk.csproj) is a **0.2.0-preview.1** source candidate, including this README and MIT license metadata. The organization policy of 2026-11-17 requires 0.x for every component before formal market launch. Old 1.x/2.x packages retain their historical identity and do not qualify the new candidate for publication.
 
 Web, MAUI, desktop and Blazor wrappers/samples will follow actual needs. Protocol support does not imply a complete cross-platform SDK. The existing [Server DemoClient](https://github.com/PandaLabs2026/panda-auth-server/tree/main/samples/PandaAuth.DemoClient) is not evidence that this SDK has passed acceptance testing.
 
@@ -42,9 +42,9 @@ Product roadmap, release gates and community/commercial boundaries remain mainta
 - [Contributing](CONTRIBUTING.md): repository-specific checks and the shared contribution policy.
 - [MIT License](LICENSE) for project-owned code/documentation, subject to [license scope](LICENSING.md); third-party terms remain applicable and brand images are excluded.
 
-## Discovery trust / 2.0 migration
+## Discovery trust / preview migration
 
-Source candidate: SDK 2.0.0 with Share 1.0.1; these changes have not been published as packages or deployed. Previously distributed 1.0.0 remains historical release evidence.
+Source candidate: SDK and Share **0.2.0-preview.1**, without public distribution or deployment. Old 1.x/2.x candidates are historical. Pin both packages explicitly to `[0.2.0-preview.1]` to avoid resolving a historical higher version. This version rebase retains the current discovery trust behavior.
 
 Use `using var client = new PandaAuthClient(options)` for network calls. This creates a TLS-validating transport with automatic redirects disabled. Direct `HttpMessageHandler` injection is available for trusted application transports; the SDK disables redirects on native handlers, rejects delegating handlers, and owns the supplied handler. Custom transports must never redirect or retry credential requests.
 
